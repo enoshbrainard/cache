@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 222 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 18%;
+    --input: 0 0% 12%;
+    --ring: 222 100% 60%;
+    --radius: 0.25rem;
+    --chart-1: 222 100% 60%;
+    --chart-2: 142 70% 45%;
+    --chart-3: 0 100% 60%;
+    --chart-4: 48 100% 50%;
+    --chart-5: 200 100% 50%;
+  }
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html, body {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular,
+    Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-feature-settings: 'liga' 0;
+  letter-spacing: -0.01em;
+}
+
+body {
+  background-image:
+    radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
+
+::selection {
+  background: #3366FF;
+  color: white;
+}
+
+/* Custom scrollbar for the dark dev-tool aesthetic */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: #0A0A0A; }
+*::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+.flash-hit {
+  animation: flash-hit 0.6s ease-out;
+}
+.flash-miss {
+  animation: flash-miss 0.6s ease-out;
+}
+@keyframes flash-hit {
+  0% { background-color: rgba(0, 204, 102, 0.35); box-shadow: 0 0 24px rgba(0,204,102,0.5); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+@keyframes flash-miss {
+  0% { background-color: rgba(255, 51, 51, 0.35); box-shadow: 0 0 24px rgba(255,51,51,0.5); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+.ring-glow {
+  filter: drop-shadow(0 0 6px rgba(51,102,255,0.45));
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.terminal-cursor::after {
+  content: '_';
+  animation: blink 1s step-end infinite;
+  color: #3366FF;
+  margin-left: 2px;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
