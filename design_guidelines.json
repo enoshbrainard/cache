@@ -1,0 +1,85 @@
+{
+  "theme": "Dark",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) - Dark Mode Developer Tool Variant",
+  "typography": {
+    "heading_font": "Cabinet Grotesk, Space Mono, or JetBrains Mono",
+    "body_font": "JetBrains Mono or IBM Plex Mono",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl tracking-tighter font-black",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body": "text-sm",
+      "overline": "uppercase text-[10px] tracking-[0.2em] font-bold text-gray-500"
+    },
+    "general_rules": "No Inter. Use radical weight contrast. Monospace fonts MUST be used for all data, logs, and metrics visualization for tabular alignment."
+  },
+  "colors": {
+    "background_base": "#0A0A0A",
+    "background_card": "#141414",
+    "border_subtle": "rgba(255,255,255,0.1)",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "rgba(255,255,255,0.6)",
+    "accents": {
+      "primary": "#3366FF",
+      "success": "#00CC66",
+      "warning": "#FFCC00",
+      "danger": "#FF3333",
+      "info": "#00A8FF"
+    },
+    "rules": "Color is Function Only. 95% of the UI should be monochrome. Color exists only to guide action or indicate status (hit = success, miss = danger). Never use pure #000000; #0A0A0A acts as base."
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "p-1, p-2, p-4, p-6, p-8, p-12",
+    "grid_strategy": "MODE B: THE 'CONTROL ROOM' GRID",
+    "grid_rules": [
+      "Base Grid: grid-cols-1 md:grid-cols-3 lg:grid-cols-4, gap-4 or gap-6",
+      "Widgets must utilize h-full. No jagged bottoms.",
+      "Summary Metrics: col-span-1",
+      "Main Chart (Ring or Load): col-span-2 row-span-2 or col-span-3",
+      "Logs/Lists: col-span-1 row-span-2 (Tall narrow)"
+    ],
+    "container_padding": "Containers with borders must have internal padding (p-4 or p-6) to prevent text collision."
+  },
+  "surfaces_and_components": {
+    "cards_widgets": "GRID BORDERS (The 'Technical' Look). Container uses flat dark background (#141414) with 1px solid border-border/40, sharp edges or max 4px border-radius. No soft shadows.",
+    "buttons": "Square or very subtle rounded (max rounded-md). High contrast background (Primary accent or pure white) for main actions. For secondary actions, flat background with 1px subtle border.",
+    "inputs": "Shadcn UI Input customized with sharp edges, dark background (#0A0A0A), and 1px border. Focus state must use ring-2 ring-primary.",
+    "visual_effects": [
+      "No heavy gradients. Use 1px sharp inner borders or solid backgrounds.",
+      "The 'Tracing Beam' effect on the Consistent Hashing Ring or Active Node to signify active processing.",
+      "Terminal Look: Subtle glowing drop-shadow on active/hit states."
+    ],
+    "component_libraries": [
+      "Shadcn UI (Customized for dark brutalism)",
+      "Recharts for Bar/Donut charts",
+      "Custom SVG for the Consistent Hashing Ring visualization (for complex data mapping)"
+    ]
+  },
+  "animations_and_motion": {
+    "micro_interactions": "Hover states must have HIGHER contrast (e.g., bg-white/10 text-white).",
+    "data_flow": "Real-time updates should flash the respective node or log entry briefly (e.g., success color for Hit, danger color for Miss).",
+    "hashing_ring": "Use smooth SVG stroke animations or framer-motion to visualize a key travelling to its respective node."
+  },
+  "icons_and_media": {
+    "icon_library": "lucide-react or Phosphor Icons (sharp/technical styles).",
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1683447551794-1c287cd42675?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhdGElMjBuZXR3b3JrJTIwbm9kZXxlbnwwfHx8fDE3Nzc5NjA4NDZ8MA&ixlib=rb-4.1.0&q=85",
+        "category": "abstract_background",
+        "description": "Black and white photo of a network of dots. Use at 10% opacity as a texture in empty states or hero headers."
+      }
+    ]
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure minimum 4.5:1 ratio for text. Text shadow if needed.",
+    "test_attributes": "All interactive and key informational elements MUST include data-testid attribute (e.g., data-testid='add-node-button')."
+  },
+  "instructions_to_main_agent": [
+    "Build the dashboard using a strict 'Control Room' dense grid.",
+    "Use a monochrome palette (#0A0A0A to #FFFFFF) where colors (Green/Red) are STRICTLY reserved for cache Miss/Hit or critical statuses.",
+    "For the Consistent Hashing Ring, render an SVG where nodes are plotted on a circle. Animate data points (keys) moving to their corresponding node.",
+    "Ensure all metrics update in real-time or simulate real-time updates.",
+    "Use JetBrains Mono or similar monospace font for all numbers, logs, and keys to give it a developer terminal aesthetic."
+  ]
+}
