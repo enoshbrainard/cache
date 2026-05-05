@@ -1,6 +1,7 @@
 // Consistent Hashing Ring implementation with virtual nodes.
-// Uses a deterministic 32-bit FNV-1a hash so the ring is reproducible and
-// the simulator can show key -> node placement clearly.
+// Uses MD5 (first 8 hex chars -> 32-bit unsigned int) so the ring is
+// deterministic and reproducible. The simulator visualizes key -> node
+// placement based on this hash.
 
 const crypto = require('crypto');
 
