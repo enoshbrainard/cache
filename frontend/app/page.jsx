@@ -6,6 +6,7 @@ import { api } from './lib/api';
 import HashRingViz from './components/HashRingViz';
 import NodeBlocks from './components/NodeBlocks';
 import MetricsCharts from './components/MetricsCharts';
+import HitRateTimeline from './components/HitRateTimeline';
 import OpsPanel from './components/OpsPanel';
 import ConfigPanel from './components/ConfigPanel';
 import LogsPanel from './components/LogsPanel';
@@ -21,6 +22,8 @@ export default function HomePage() {
   const [highlight, setHighlight] = useState(null); // {key, primary, replicas, angle}
   const [flash, setFlash] = useState(null); // {nodeId, kind}
   const [lastResult, setLastResult] = useState(null); // {op, key, hit, value, primary}
+  const [migrations, setMigrations] = useState([]); // active key-migration animations
+  const seenLogTsRef = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
   useEffect(() => { setMounted(true); }, []);
@@ -32,6 +35,30 @@ export default function HomePage() {
       setMetrics(m);
       setLogs(l.logs);
       setError(null);
+      // Detect any new REBALANCE / NODE_REMOVE log entries with migrations and
+      // queue them up for animation. Logs are newest-first; we use the
+      // timestamp watermark to avoid replaying old events.
+      const newest = l.logs.length ? new Date(l.logs[0].ts).getTime() : 0;
+      if (newest > seenLogTsRef.current) {
+        const fresh = [];
+        for (const entry of l.logs) {
+          const ts = new Date(entry.ts).getTime();
+          if (ts <= seenLogTsRef.current) break;
+          if ((entry.event === 'REBALANCE' || entry.event === 'NODE_REMOVE') && Array.isArray(entry.migrations)) {
+            for (const mig of entry.migrations) {
+              fresh.push({ ...mig, id: `${ts}-${mig.from}-${mig.to}-${mig.key}` });
+            }
+          }
+        }
+        seenLogTsRef.current = newest;
+        if (fresh.length > 0) {
+          setMigrations((prev) => [...prev, ...fresh]);
+          // Auto-clear after the SVG animation duration.
+          setTimeout(() => {
+            setMigrations((prev) => prev.filter((m) => !fresh.find((f) => f.id === m.id)));
+          }, 1200);
+        }
+      }
     } catch (e) {
       setError(`Backend unreachable: ${e.message}`);
     }
@@ -228,6 +255,7 @@ export default function HomePage() {
                 nodes={state ? state.nodes : []}
                 keyHighlight={highlight}
                 replicationFactor={cfg.replicationFactor}
+                migrations={migrations}
               />
             )}
           </div>
@@ -247,8 +275,17 @@ export default function HomePage() {
         </section>
 
         {/* Middle row: charts */}
-        <section>
-          {mounted && <MetricsCharts metrics={metrics} />}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {mounted && (
+            <>
+              <div className="lg:col-span-2">
+                <MetricsCharts metrics={metrics} />
+              </div>
+              <div className="lg:col-span-1">
+                <HitRateTimeline metrics={metrics} />
+              </div>
+            </>
+          )}
         </section>
 
         {/* Bottom row: nodes */}

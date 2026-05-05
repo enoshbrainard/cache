@@ -8,7 +8,7 @@ import { colorForNode, COLORS } from '../lib/colors';
 // also draw a small marker for the key and a chord/arrow to the node it maps
 // to so the user can see "this key lives on that node" intuitively.
 
-export default function HashRingViz({ ring = [], nodes = [], keyHighlight = null, replicationFactor = 1 }) {
+export default function HashRingViz({ ring = [], nodes = [], keyHighlight = null, replicationFactor = 1, migrations = [] }) {
   const SIZE = 420;
   const CX = SIZE / 2;
   const CY = SIZE / 2;
@@ -178,6 +178,55 @@ export default function HashRingViz({ ring = [], nodes = [], keyHighlight = null
             </text>
           </g>
         )}
+
+        {/* Animated key migrations across the ring */}
+        {migrations.map((m) => {
+          if (m.fromAngle == null || m.toAngle == null) return null;
+          const [sx, sy] = pointAt(m.fromAngle, R);
+          const [ex, ey] = pointAt(m.toAngle, R);
+          // Curve mid-point pulled toward center for a graceful arc.
+          const mx = (sx + ex) / 2;
+          const my = (sy + ey) / 2;
+          const dx = mx - CX;
+          const dy = my - CY;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const cx = CX + dx * 0.25; // pull arc inward
+          const cy = CY + dy * 0.25;
+          const path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+          const fromColor = colorForNode(m.from);
+          const toColor = colorForNode(m.to);
+          const dur = '900ms';
+          return (
+            <g key={m.id} style={{ pointerEvents: 'none' }}>
+              <path
+                d={path}
+                fill="none"
+                stroke={toColor}
+                strokeWidth="1"
+                strokeDasharray="3 4"
+                opacity="0.45"
+              >
+                <animate attributeName="opacity" values="0.6;0" dur={dur} fill="freeze" />
+              </path>
+              <circle r="4" fill={fromColor} stroke="white" strokeWidth="1" style={{ filter: `drop-shadow(0 0 6px ${fromColor})` }}>
+                <animateMotion dur={dur} repeatCount="1" fill="freeze" path={path} />
+                <animate attributeName="fill" from={fromColor} to={toColor} dur={dur} fill="freeze" />
+              </circle>
+              <text
+                fill="white"
+                fontSize="9"
+                textAnchor="middle"
+                dy="-8"
+                fontFamily="ui-monospace, monospace"
+                opacity="0.85"
+              >
+                <animateMotion dur={dur} repeatCount="1" fill="freeze" path={path} />
+                <animate attributeName="opacity" values="1;0" dur={dur} fill="freeze" />
+                {m.key}
+              </text>
+            </g>
+          );
+        })}
 
         <text
           x={CX}

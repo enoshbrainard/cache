@@ -61,10 +61,13 @@ class Cluster {
     if (!this.nodes.has(nodeId)) return false;
     if (this.nodes.size <= 1) return false; // keep at least one
     const removedNode = this.nodes.get(nodeId);
+    // Capture the visual anchor angle of the node BEFORE we drop it from
+    // the ring so the UI can animate keys flying away from its position.
+    const fromAngle = this._nodeAnchorAngle(nodeId);
     this.ring.removeNode(nodeId);
     this.nodes.delete(nodeId);
     // Re-route surviving keys from removed node to their new owners.
-    let migrated = 0;
+    const migrations = [];
     for (const k of removedNode.listKeys()) {
       const entry = removedNode.store.get(k.key);
       if (!entry) continue;
@@ -78,21 +81,39 @@ class Cluster {
         for (let i = 1; i < owners.length; i++) {
           this.nodes.get(owners[i]).replicaSet(k.key, entry.value, ttlRemaining);
         }
-        migrated += 1;
+        migrations.push({
+          key: k.key,
+          from: nodeId,
+          to: primary,
+          fromAngle,
+          toAngle: this._nodeAnchorAngle(primary),
+        });
       }
     }
     this._log({
       event: 'NODE_REMOVE',
       nodeId,
-      message: `Removed ${nodeId}, migrated ${migrated} keys`,
+      message: `Removed ${nodeId}, migrated ${migrations.length} keys`,
+      migrations,
     });
     return true;
   }
 
+  _nodeAnchorAngle(nodeId) {
+    // Returns the angle (0..360) of the first virtual node belonging to
+    // `nodeId` on the ring. Used to animate key migrations.
+    const MAX = 0xffffffff;
+    for (const e of this.ring.ring) {
+      if (e.nodeId === nodeId) return (e.hash / MAX) * 360;
+    }
+    return null;
+  }
+
   _rebalanceAfterTopologyChange(kind, changedNodeId) {
     // After adding a node some keys might now belong to the new owner.
-    // Move them to maintain consistency.
-    let moved = 0;
+    // Move them to maintain consistency. Capture per-key migrations so the
+    // dashboard can animate keys flying from old node -> new node.
+    const migrations = [];
     for (const node of this.nodes.values()) {
       const keys = node.listKeys().map((k) => k.key);
       for (const k of keys) {
@@ -109,14 +130,21 @@ class Cluster {
             this.nodes.get(owner).replicaSet(k, entry.value, ttlRemaining);
           }
           node.replicaDelete(k);
-          moved += 1;
+          migrations.push({
+            key: k,
+            from: node.id,
+            to: owners[0],
+            fromAngle: this._nodeAnchorAngle(node.id),
+            toAngle: this._nodeAnchorAngle(owners[0]),
+          });
         }
       }
     }
-    if (moved > 0) {
+    if (migrations.length > 0) {
       this._log({
         event: 'REBALANCE',
-        message: `Rebalanced ${moved} keys after ${kind} of ${changedNodeId}`,
+        message: `Rebalanced ${migrations.length} keys after ${kind} of ${changedNodeId}`,
+        migrations,
       });
     }
   }

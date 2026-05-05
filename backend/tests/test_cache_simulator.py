@@ -235,3 +235,108 @@ def test_reset_returns_three_nodes_and_lru():
     state = requests.get(f"{API}/state", timeout=10).json()
     assert len(state["nodes"]) == 3
     assert state["config"]["policy"] == "LRU"
+
+
+# ---------- Migration payloads in topology logs (iteration_2) ----------
+def _get_logs():
+    body = requests.get(f"{API}/logs", timeout=10).json()
+    return body.get("logs", body) if isinstance(body, dict) else body
+
+
+def test_add_node_rebalance_log_contains_migrations_payload():
+    """Adding a node after seeding keys should yield a REBALANCE log entry
+    whose `migrations` array has per-key {key, from, to, fromAngle, toAngle}."""
+    # Seed many keys to make it very likely at least one reshuffles to the new owner
+    for i in range(20):
+        requests.post(
+            f"{API}/cache", json={"key": f"TEST_mig_{i}", "value": str(i)}, timeout=10
+        )
+    add = requests.post(f"{API}/nodes", timeout=10)
+    assert add.status_code == 200
+
+    logs = _get_logs()
+    rebal = [e for e in logs if e.get("event") == "REBALANCE"]
+    assert len(rebal) >= 1, "Expected at least one REBALANCE log after adding node"
+    entry = rebal[0]
+    assert isinstance(entry.get("migrations"), list)
+    # With 20 keys + a brand-new node most of the time at least 1 migrates.
+    if len(entry["migrations"]) > 0:
+        m = entry["migrations"][0]
+        for field in ("key", "from", "to", "fromAngle", "toAngle"):
+            assert field in m, f"migration entry missing field: {field}"
+        assert isinstance(m["key"], str)
+        assert isinstance(m["from"], str)
+        assert isinstance(m["to"], str)
+        assert m["from"] != m["to"]
+        assert 0 <= m["fromAngle"] <= 360
+        assert 0 <= m["toAngle"] <= 360
+
+
+def test_empty_cluster_add_emits_no_migrations():
+    """Adding a node when there are no keys should not emit any REBALANCE
+    log (or migrations list should be empty)."""
+    # Fresh cluster is already empty (from _reset_cluster fixture).
+    before = _get_logs()
+    pre_rebal = [e for e in before if e.get("event") == "REBALANCE"]
+    requests.post(f"{API}/nodes", timeout=10)
+    after = _get_logs()
+    post_rebal = [e for e in after if e.get("event") == "REBALANCE"]
+    # Either no new REBALANCE entry or any new entries have empty migrations.
+    new_entries = post_rebal[: max(0, len(post_rebal) - len(pre_rebal))]
+    for e in new_entries:
+        migs = e.get("migrations", [])
+        assert migs == [], f"expected empty migrations on empty cluster, got {migs}"
+
+
+def test_remove_node_log_contains_migrations_with_from_angle_preserved():
+    """Removing a populated node should emit NODE_REMOVE log with migrations
+    containing fromAngle (captured before ring removal) and valid toAngle."""
+    # Seed keys
+    for i in range(15):
+        requests.post(
+            f"{API}/cache", json={"key": f"TEST_rem_{i}", "value": str(i)}, timeout=10
+        )
+    state = requests.get(f"{API}/state", timeout=10).json()
+    # Find a node that currently holds at least one key
+    populated = next((n for n in state["nodes"] if n["size"] > 0), None)
+    assert populated is not None, "no populated node to remove"
+    target_id = populated["id"]
+
+    rem = requests.delete(f"{API}/nodes/{target_id}", timeout=10)
+    assert rem.status_code == 200
+
+    logs = _get_logs()
+    remove_entries = [
+        e for e in logs if e.get("event") == "NODE_REMOVE" and e.get("nodeId") == target_id
+    ]
+    assert len(remove_entries) == 1
+    entry = remove_entries[0]
+    assert isinstance(entry.get("migrations"), list)
+    assert len(entry["migrations"]) >= 1, "expected >=1 migration for populated removed node"
+    for m in entry["migrations"]:
+        for field in ("key", "from", "to", "fromAngle", "toAngle"):
+            assert field in m, f"missing {field} in migration entry: {m}"
+        assert m["from"] == target_id
+        assert m["to"] != target_id
+        # fromAngle should be non-null (captured before ring removal)
+        assert m["fromAngle"] is not None
+        assert 0 <= m["fromAngle"] <= 360
+        assert m["toAngle"] is not None
+        assert 0 <= m["toAngle"] <= 360
+
+
+def test_remove_empty_node_emits_no_migrations():
+    """Removing a node that holds zero keys should emit NODE_REMOVE with an
+    empty migrations array."""
+    # Add a fresh node; it will not own any keys yet because cluster is empty.
+    add = requests.post(f"{API}/nodes", timeout=10)
+    new_id = add.json().get("nodeId")
+    # Ensure it's empty (cluster has no keys from fixture)
+    rem = requests.delete(f"{API}/nodes/{new_id}", timeout=10)
+    assert rem.status_code == 200
+    logs = _get_logs()
+    remove_entries = [e for e in logs if e.get("event") == "NODE_REMOVE" and e.get("nodeId") == new_id]
+    assert len(remove_entries) == 1
+    migs = remove_entries[0].get("migrations", [])
+    assert migs == [], f"expected empty migrations for empty node removal, got {migs}"
+
