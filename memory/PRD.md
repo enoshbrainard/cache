@@ -46,6 +46,14 @@ nodes using **consistent hashing**, with switchable **eviction strategies
 - Hit/miss donut + requests-per-node bar chart
 - Live event trace log with color-coded event types
 
+## Iteration 2 (2026-02-05)
+- Hit-rate-over-time line chart (60-sample rolling window, computed from
+  delta hits/misses between polls).
+- Animated key migration on node add/remove: backend now emits per-key
+  `migrations: [{key, from, to, fromAngle, toAngle}]` inside REBALANCE and
+  NODE_REMOVE log events; frontend animates dots flying along the ring
+  from old node anchor → new node anchor (~900ms).
+
 ## Backlog
 ### P1
 - Time-series chart of hit-rate over the last N minutes
